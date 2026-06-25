@@ -1,6 +1,12 @@
-import algoliasearch from 'algoliasearch';
+import algoliasearch from 'algoliasearch/lite';
 import instantsearch from 'instantsearch.js';
-import { searchBox, hits, pagination, refinementList } from 'instantsearch.js/es/widgets';
+import { EXPERIMENTAL_autocomplete } from 'instantsearch.js/es/widgets/autocomplete/autocomplete';
+import configure from 'instantsearch.js/es/widgets/configure/configure';
+import hits from 'instantsearch.js/es/widgets/hits/hits';
+import pagination from 'instantsearch.js/es/widgets/pagination/pagination';
+import refinementList from 'instantsearch.js/es/widgets/refinement-list/refinement-list';
+import ratingMenu from 'instantsearch.js/es/widgets/rating-menu/rating-menu';
+import toggleRefinement from 'instantsearch.js/es/widgets/toggle-refinement/toggle-refinement';
 
 import resultHit from '../templates/result-hit';
 
@@ -29,6 +35,7 @@ class ResultPage {
     this._searchInstance = instantsearch({
       indexName: process.env.ALGOLIA_INDEX,
       searchClient: this._searchClient,
+      insights: true,
     });
   }
 
@@ -39,8 +46,29 @@ class ResultPage {
    */
   _registerWidgets() {
     this._searchInstance.addWidgets([
-      searchBox({
+      configure({
+        clickAnalytics: true,
+      }),
+      EXPERIMENTAL_autocomplete({
         container: '#searchbox',
+        placeholder: 'Search for products',
+        indices: [
+          {
+            indexName: process.env.ALGOLIA_INDEX,
+            getQuery: (item) => item.name,
+            templates: {
+              header: (_, { html }) => html`<div class="autocomplete__header">Products</div>`,
+              item: ({ item, onSelect }, { html }) =>
+                html`<a class="autocomplete__item" onClick=${onSelect} href="#">
+                  <img class="autocomplete__item-image" src="${item.image}" alt="${item.name}" />
+                  <div class="autocomplete__item-details">
+                    <span class="autocomplete__item-name">${item.name}</span>
+                    <span class="autocomplete__item-price">$${item.price}</span>
+                  </div>
+                </a>`,
+            },
+          },
+        ],
       }),
       hits({
         container: '#hits',
@@ -54,10 +82,27 @@ class ResultPage {
       refinementList({
         container: '#brand-facet',
         attribute: 'brand',
+        searchable: true
       }),
       refinementList({
         container: '#categories-facet',
         attribute: 'categories',
+        searchable: true
+      }),
+      refinementList({
+        container: '#price-range-facet',
+        attribute: 'price_range',
+      }),
+      ratingMenu({
+        container: '#rating-facet',
+        attribute: 'rating',
+      }),
+      toggleRefinement({
+        container: '#free-shipping-facet',
+        attribute: 'free_shipping',
+        templates: {
+          labelText: 'Free Shipping',
+        },
       }),
     ]);
   }
